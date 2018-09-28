@@ -28,7 +28,7 @@ const sqlFindDefaultBooks = "SELECT cover_thumbnail,title, concat(author_firstna
 //Find by id
 const sqlFindOneBook = "SELECT *  FROM books WHERE id=?";
 //Find books queries
-const sqlFindAllBooks = "SELECT concat('images/',cover_thumbnail) as img,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY title ASC LIMIT ? OFFSET ?"
+const sqlFindAllBooks = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY title ASC LIMIT ? OFFSET ?"
 // Find books sort by title ASC
 const sqlFindAllBooksTitleAsc = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY title ASC LIMIT ? OFFSET ?"
 // Find books sort by title DESC
