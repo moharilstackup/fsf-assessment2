@@ -113,7 +113,7 @@ app.get(API_URI + '/books', (req, resp) => {
     console.log("/books query");
 
     // since author firstname may contain empty strings, forced to use special character '³' 
-    // Assume author and title may contain empty data
+    // Assume author and title may contain empty data to make it stricter in query
     if (typeof (req.query.author) === 'undefined') {
         req.query.author = '³';
     }
