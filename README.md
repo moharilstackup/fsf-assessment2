@@ -7,6 +7,19 @@ This project was generated with [Angular CLI](https://github.com/angular/angular
 
 2)Use 'POSTMAN' or 'Advanced REST client` app for testing
 
+Queries keyword
+```
+  title     => book title
+
+  author    => book author
+  
+  limit     => number of books listed
+  
+  offset    => pagination
+  
+  sortType  => values are titleAsc, titleDesc, authorAsc, authorDesc, refer to examples below
+```
+
 Below are the queries
 
 Requirement 1
@@ -82,8 +95,36 @@ Requirement 1
        http://localhost:3000/api/books?title=adv&author=wil&limit=3
     
     g.You may use GET or POST methods for the search
+
+
+Requirement 2
+
+1.Search fields using parameters: book id 
+
+2.Return a single book.
+
+3.Query Book info return as all details result.
+
 ```
-Give examples
+http://localhost:3000/api/books/2
+[
+  {
+"id": 2,
+"author_lastname": "St Michael",
+"author_firstname": "",
+"title": "Aircraft",
+"cover_thumbnail": "no_book_cover.jpg",
+"modified_date": "2016-07-25T16:00:00.000Z",
+"created_date": "2016-07-25T16:00:00.000Z",
+"is_deleted": 0
+}
+],
+```
+
+4.Markdown all your restful API with best practice naming convention on your project README.md
+
+```
+As above
 ```
 
 ## Development server
