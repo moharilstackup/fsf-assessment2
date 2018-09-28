@@ -16,11 +16,19 @@ console.log("process.env.DB_PORT => ", process.env.DB_PORT);
 
 
 //Q2a :  Default list , limit 10 offset 0 ASC product name
-const sqlFindDefaultBooks = "SELECT * FROM books ORDER BY title ASC LIMIT 10 OFFSET 0";
+const sqlFindDefaultBooks = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name  FROM books ORDER BY title ASC LIMIT 10 OFFSET 0";
 //Find by id
-const sqlFindOneBook = "SELECT * FROM books WHERE id=?";
+const sqlFindOneBook = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name  FROM books WHERE id=?";
 //Find books queries
 const sqlFindAllBooks = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY title ASC LIMIT ? OFFSET ?"
+// Find books sort by title ASC
+const sqlFindAllBooksTitleAsc = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY title ASC LIMIT ? OFFSET ?"
+// Find books sort by title DESC
+const sqlFindAllBooksTitleDesc = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY title DESC LIMIT ? OFFSET ?"
+// Find books sort by author ASC, sort last name , followed by first name
+const sqlFindAllBooksNameAsc = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY author_lastname ASC, author_firstname ASC  LIMIT ? OFFSET ?"
+// Find books sort by author desc, sort last name , followed by first name
+const sqlFindAllBooksNameDesc = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY author_lastname DESC, author_firstname DESC  LIMIT ? OFFSET ?"
 
 
 
@@ -76,6 +84,10 @@ var makeQuery = (sql, pool) => {
 var findDefaultBooks = makeQuery(sqlFindDefaultBooks, pool);
 var findOneBookById = makeQuery(sqlFindOneBook, pool);
 var findAllBooks = makeQuery(sqlFindAllBooks, pool);
+var findAllBooksTitleAsc = makeQuery(sqlFindAllBooksTitleAsc, pool);
+var findAllBooksTitleDesc = makeQuery(sqlFindAllBooksTitleDesc, pool);
+var findAllBooksNameAsc = makeQuery(sqlFindAllBooksNameAsc, pool);
+var findAllBooksNameDesc = makeQuery(sqlFindAllBooksNameDesc, pool);
 
 
 //var findAllGroceries = makeQuery(sqlFindAllGroceries, pool);
@@ -93,17 +105,6 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-/* app.get(API_URI + "/books", (req, res) => {
-    console.log("/books params !");
-    let bookId = req.params.bookId;
-    console.log(bookId);
-    findDefaultBooks().then((results) => {
-        console.log(results);
-        res.json(results);
-    }).catch((error) => {
-        res.status(500).json(error);
-    })
-}) */
 
 // requirement 2, question 1 Search fields using parameters: book id
 app.get(API_URI + "/books/:bookId", (req, res) => {
@@ -141,8 +142,8 @@ app.get(API_URI + '/books', (req, resp) => {
     } else {
         //1.Search fields using queries: Title & Autho
         //  http://localhost:3000/api/books?title=adv&limit=10&offset=0
-        //  http://localhost:3000/api/books?name=wil&limit=10&offset=0
-        //  http://localhost:3000/api/books?title=adv&name=wil&limit=10&offset=0
+        //  http://localhost:3000/api/books?author=wil&limit=10&offset=0
+        //  http://localhost:3000/api/books?title=adv&author=wil&limit=10&offset=0
         //  if (typeof (bookId) === 'undefined') {
         if (typeof (req.query.limit) === 'undefined') {
             req.query.limit = '10';
@@ -156,15 +157,14 @@ app.get(API_URI + '/books', (req, resp) => {
         if (typeof (req.query.sortType) === 'undefined') {
             req.query.sortType = 'none';
         }
+        if (typeof (req.query.offset) === 'undefined') {
+            req.query.offset = '0';
+        }
         console.log(req.query);
-        console.log(">>>" + bookId);
-        //var keyword = req.query.keyword;
-        //var selectionType = req.query.selectionType;
+
         var title_keyword = req.query.title;
         var author_keyword = req.query.author;
-        //var orderBy = req.query.orderBy;
-        //console.log(keyword);
-        //console.log(selectionType);
+
         console.log(title_keyword);
         console.log(author_keyword);
         //console.log(orderBy);
@@ -182,15 +182,59 @@ app.get(API_URI + '/books', (req, resp) => {
                     finalCriteriaFromType = ['%' + keyword + '%', '%' + keyword + '%', '%' + keyword + '%', parseInt(req.query.limit),parseInt(req.query.offset)];
                 } */
         finalCriteriaFromType = ['%' + title_keyword + '%', '%' + author_keyword + '%', '%' + author_keyword + '%', parseInt(req.query.limit), parseInt(req.query.offset)];
+        if (req.query.sortType == 'none') {
+            findAllBooks(finalCriteriaFromType)
+                .then((results) => {
+                    console.log(results);
+                    resp.json(results);
+                }).catch((error) => {
+                    resp.status(500).json(error);
+                });
+        } else if (req.query.sortType == 'titleAsc') {
+            // http://localhost:3000/api/books?title=adv&author=wil&limit=10&offset=0&sortType=titleAsc
+            console.log("sort title asc");
+            findAllBooksTitleAsc(finalCriteriaFromType)
+                .then((results) => {
+                    console.log(results);
+                    resp.json(results);
+                }).catch((error) => {
+                    resp.status(500).json(error);
+                });
+        } else if (req.query.sortType == 'titleDesc') {
+            // http://localhost:3000/api/books?title=adv&author=wil&limit=10&offset=0&sortType=titleDesc
+            console.log("sort title desc");
+            findAllBooksTitleDesc(finalCriteriaFromType)
+                .then((results) => {
+                    console.log(results);
+                    resp.json(results);
+                }).catch((error) => {
+                    resp.status(500).json(error);
+                });
+        } else if (req.query.sortType == 'authorAsc') {
+            // http://localhost:3000/api/books?title=adv&author=wil&limit=10&offset=0&sortType=authorAsc
+            // sort by first name then followed by last name
+            console.log("sort author asc");
+            findAllBooksNameAsc(finalCriteriaFromType)
+                .then((results) => {
+                    console.log(results);
+                    resp.json(results);
+                }).catch((error) => {
+                    resp.status(500).json(error);
+                });
+        } else if (req.query.sortType == 'authorDesc') {
+            // http://localhost:3000/api/books?title=adv&author=wil&limit=10&offset=0&sortType=authorDesc
+            // sort by first name then followed by last name
+            console.log("sort author DESC");
+            findAllBooksNameDesc(finalCriteriaFromType)
+                .then((results) => {
+                    console.log(results);
+                    resp.json(results);
+                }).catch((error) => {
+                    resp.status(500).json(error);
+                });
+        }
 
 
-        findAllBooks(finalCriteriaFromType)
-            .then((results) => {
-                console.log(results);
-                resp.json(results);
-            }).catch((error) => {
-                resp.status(500).json(error);
-            });
 
 
     }
