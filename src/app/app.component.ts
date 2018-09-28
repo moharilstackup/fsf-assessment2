@@ -9,16 +9,16 @@ import { GroceriesServiceService } from './groceries-service.service';
 })
 
 export class AppComponent implements OnInit {
-  title = 'ssf-assessB';
+  title = 'fsf-assessment2';
   groceries = [];
   sortedData = [];
   keyword = "";
   selectionType = "";
-  orderBy = "none";
+ // orderBy = "none";
 
   selections = [
-    { viewValue: "Brand", value: "brand" },
-    { viewValue: "Name", value: "name" },
+    { viewValue: "Title", value: "title" },
+    { viewValue: "Author", value: "name" },
     { viewValue: "Both", value: "both" }
   ]
 
@@ -27,7 +27,7 @@ export class AppComponent implements OnInit {
     'limit': 20,
     'keyword': '',
     'selectionType': '',
-    'orderBy': 'none'
+ //   'orderBy': 'none'
   }
 
   constructor(private grocerySvc: GroceriesServiceService) { }

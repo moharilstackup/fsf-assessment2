@@ -20,7 +20,7 @@ const sqlFindDefaultBooks = "SELECT * FROM books ORDER BY title ASC LIMIT 10 OFF
 //Find by id
 const sqlFindOneBook = "SELECT * FROM books WHERE id=?";
 //Find books queries
-const sqlFindAllBooks = "SELECT * FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY title ASC LIMIT ? OFFSET ?"
+const sqlFindAllBooks = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY title ASC LIMIT ? OFFSET ?"
 
 
 
@@ -93,7 +93,19 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
+/* app.get(API_URI + "/books", (req, res) => {
+    console.log("/books params !");
+    let bookId = req.params.bookId;
+    console.log(bookId);
+    findDefaultBooks().then((results) => {
+        console.log(results);
+        res.json(results);
+    }).catch((error) => {
+        res.status(500).json(error);
+    })
+}) */
 
+// requirement 2, question 1 Search fields using parameters: book id
 app.get(API_URI + "/books/:bookId", (req, res) => {
     console.log("/books/:bookId params !");
     let bookId = req.params.bookId;
@@ -106,20 +118,55 @@ app.get(API_URI + "/books/:bookId", (req, res) => {
     })
 })
 
-
 app.get(API_URI + '/books', (req, resp) => {
     console.log("/books query");
     var bookId = req.query.bookId;
     console.log(bookId);
 
-    if (typeof (bookId) === 'undefined') {
+    if (  // R1Q2a, default endpoint http://localhost:3000/api/books
+        (typeof (req.query.limit) === 'undefined') &&
+        (typeof (req.query.author) === 'undefined') &&
+        (typeof (req.query.name) === 'undefined') &&
+        (typeof (req.query.sortType) === 'undefined') &&
+        (typeof (req.query.name) === 'undefined')
+    ) {
+        console.log("Empty query");
+        console.log("Here");
+        findDefaultBooks().then((results) => {
+            resp.json(results);
+        }).catch((error) => {
+            console.log(error);
+            resp.status(500).json(error);
+        });
+    } else {
+        //1.Search fields using queries: Title & Autho
+        //  http://localhost:3000/api/books?title=adv&limit=10&offset=0
+        //  http://localhost:3000/api/books?name=wil&limit=10&offset=0
+        //  http://localhost:3000/api/books?title=adv&name=wil&limit=10&offset=0
+        //  if (typeof (bookId) === 'undefined') {
+        if (typeof (req.query.limit) === 'undefined') {
+            req.query.limit = '10';
+        }
+        if (typeof (req.query.author) === 'undefined') {
+            req.query.author = '³';
+        }
+        if (typeof (req.query.title) === 'undefined') {
+            req.query.title = '³';
+        }
+        if (typeof (req.query.sortType) === 'undefined') {
+            req.query.sortType = 'none';
+        }
         console.log(req.query);
         console.log(">>>" + bookId);
-        var keyword = req.query.keyword;
-        var selectionType = req.query.selectionType;
+        //var keyword = req.query.keyword;
+        //var selectionType = req.query.selectionType;
+        var title_keyword = req.query.title;
+        var author_keyword = req.query.author;
         //var orderBy = req.query.orderBy;
-        console.log(keyword);
-        console.log(selectionType);
+        //console.log(keyword);
+        //console.log(selectionType);
+        console.log(title_keyword);
+        console.log(author_keyword);
         //console.log(orderBy);
         // Array contains [ <title>, <firstname>, <lastname>,  <limit>, <offset>]
         //   if title keyword, then [ keyword, '', '', limit, offset]
@@ -127,33 +174,37 @@ app.get(API_URI + '/books', (req, resp) => {
         //   if both , then [ keyword, keyword, keyword, limit, offset]
         // since author firstname contain empty strings, forced to use special character '³' 
         let finalCriteriaFromType = ['%', '%', '%', parseInt(req.query.limit), parseInt(req.query.offset)];
-        if (selectionType == 'title') {
-            finalCriteriaFromType = ['%' + keyword + '%', '³', '³', parseInt(req.query.limit),parseInt(req.query.offset)];
-        } else if (selectionType == 'name') {
-            finalCriteriaFromType = ['³', '%' + keyword + '%', '%' + keyword + '%', parseInt(req.query.limit),parseInt(req.query.offset)];
-        } else if (selectionType == 'both') {
-            finalCriteriaFromType = ['%' + keyword + '%', '%' + keyword + '%', '%' + keyword + '%', parseInt(req.query.limit),parseInt(req.query.offset)];
-        }
+        /*         if (selectionType == 'title') {
+                    finalCriteriaFromType = ['%' + keyword + '%', '³', '³', parseInt(req.query.limit),parseInt(req.query.offset)];
+                } else if (selectionType == 'name') {
+                    finalCriteriaFromType = ['³', '%' + keyword + '%', '%' + keyword + '%', parseInt(req.query.limit),parseInt(req.query.offset)];
+                } else if (selectionType == 'both') {
+                    finalCriteriaFromType = ['%' + keyword + '%', '%' + keyword + '%', '%' + keyword + '%', parseInt(req.query.limit),parseInt(req.query.offset)];
+                } */
+        finalCriteriaFromType = ['%' + title_keyword + '%', '%' + author_keyword + '%', '%' + author_keyword + '%', parseInt(req.query.limit), parseInt(req.query.offset)];
+
 
         findAllBooks(finalCriteriaFromType)
-        .then((results)=>{
-            console.log(results);
-            resp.json(results);
-        }).catch((error)=>{
-            resp.status(500).json(error);
-        });
- 
+            .then((results) => {
+                console.log(results);
+                resp.json(results);
+            }).catch((error) => {
+                resp.status(500).json(error);
+            });
 
-    } else {
-        // resp.status(200);
-        //resp.json({name:"fred"});
-        findOneBookById([parseInt(bookId)]).then((results) => {
-            resp.json(results);
-        }).catch((error) => {
-            console.log(error);
-            resp.status(500).json(error);
-        });
+
     }
+    /*     else {
+            // resp.status(200);
+            //resp.json({name:"fred"});
+            console.log("Here");
+            sqlFindDefaultBooks([parseInt(bookId)]).then((results) => {
+                resp.json(results);
+            }).catch((error) => {
+                console.log(error);
+                resp.status(500).json(error);
+            });
+        } */
 });
 
 
