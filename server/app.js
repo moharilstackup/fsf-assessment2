@@ -9,6 +9,14 @@ var cors = require('cors')
 //var multer  = require('multer')
 //var upload = multer({ dest: 'uploads/' })
 
+const resources = [ 'images' ];
+const images = [ 
+    'ella_the_rose_fairy.jpg',
+    'harry-potter-p-stone.jpg',
+    'no_book_cover.jpg',
+    'the_haunted_tower.jpg'];
+    
+
 const API_URI = "/api";
 
 //Configure a connection pool to the database
@@ -16,11 +24,11 @@ console.log("process.env.DB_PORT => ", process.env.DB_PORT);
 
 
 //Q2a :  Default list , limit 10 offset 0 ASC product name
-const sqlFindDefaultBooks = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name  FROM books ORDER BY title ASC LIMIT 10 OFFSET 0";
+const sqlFindDefaultBooks = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name  FROM books ORDER BY title ASC LIMIT ? OFFSET ?";
 //Find by id
-const sqlFindOneBook = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name  FROM books WHERE id=?";
+const sqlFindOneBook = "SELECT *  FROM books WHERE id=?";
 //Find books queries
-const sqlFindAllBooks = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY title ASC LIMIT ? OFFSET ?"
+const sqlFindAllBooks = "SELECT concat('images/',cover_thumbnail) as img,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY title ASC LIMIT ? OFFSET ?"
 // Find books sort by title ASC
 const sqlFindAllBooksTitleAsc = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY title ASC LIMIT ? OFFSET ?"
 // Find books sort by title DESC
@@ -31,16 +39,6 @@ const sqlFindAllBooksNameAsc = "SELECT cover_thumbnail,title, concat(author_firs
 const sqlFindAllBooksNameDesc = "SELECT cover_thumbnail,title, concat(author_firstname,' ',author_lastname) as name FROM books WHERE (title LIKE ?) || (author_firstname LIKE ?) || ( author_lastname LIKE ?) ORDER BY author_lastname DESC, author_firstname DESC  LIMIT ? OFFSET ?"
 
 
-
-//const sqlFindAllGroceries = "SELECT * FROM grocery_list WHERE (name LIKE ?) || (brand LIKE ?) LIMIT ? OFFSET ?";
-// const sqlFindAllGroceriesUnsort = "SELECT * FROM grocery_list WHERE (name LIKE ?) || (brand LIKE ?) LIMIT ? OFFSET ?";
-//const sqlFindAllGroceriesUnsort = "SELECT * FROM grocery_list WHERE (brand LIKE ?) || (name LIKE ?)";
-//const sqlFindAllGroceriesSort = "SELECT * FROM grocery_list WHERE (brand LIKE ?) || (name LIKE ?) ORDER BY ? ? ";
-//const sqlFindAllGroceriesSortNameDesc = "SELECT * FROM grocery_list WHERE (brand LIKE ?) || (name LIKE ?) ORDER BY name DESC ";
-//const sqlFindAllGroceriesSortBrandDesc = "SELECT * FROM grocery_list WHERE (brand LIKE ?) || (name LIKE ?) ORDER BY brand DESC ";
-//const sqlFindAllGroceriesSortNameAsc = "SELECT * FROM grocery_list WHERE (brand LIKE ?) || (name LIKE ?) ORDER BY name ASC ";
-//const sqlFindAllGroceriesSortBrandAsc = "SELECT * FROM grocery_list WHERE (brand LIKE ?) || (name LIKE ?) ORDER BY brand ASC ";
-//const sqlFindAllGroceries = "SELECT * FROM grocery_list limit 5";
 
 
 const pool = mysql.createPool({
@@ -90,14 +88,6 @@ var findAllBooksNameAsc = makeQuery(sqlFindAllBooksNameAsc, pool);
 var findAllBooksNameDesc = makeQuery(sqlFindAllBooksNameDesc, pool);
 
 
-//var findAllGroceries = makeQuery(sqlFindAllGroceries, pool);
-//var findAllGroceriesUnsort = makeQuery(sqlFindAllGroceriesUnsort, pool);
-//var findAllGroceriesSort = makeQuery(sqlFindAllGroceriesSort, pool);
-//var findAllGroceriesSortNameDesc = makeQuery(sqlFindAllGroceriesSortNameDesc, pool);
-//var findAllGroceriesSortBrandDesc = makeQuery(sqlFindAllGroceriesSortBrandDesc, pool);
-//var findAllGroceriesSortNameAsc = makeQuery(sqlFindAllGroceriesSortNameAsc, pool);
-//var findAllGroceriesSortBrandAsc = makeQuery(sqlFindAllGroceriesSortBrandAsc, pool);
-
 //Step 2: create an instance of the application
 const app = express();
 app.use(cors());
@@ -121,45 +111,47 @@ app.get(API_URI + "/books/:bookId", (req, res) => {
 
 app.get(API_URI + '/books', (req, resp) => {
     console.log("/books query");
-    var bookId = req.query.bookId;
-    console.log(bookId);
 
-    if (  // R1Q2a, default endpoint http://localhost:3000/api/books
-        (typeof (req.query.limit) === 'undefined') &&
-        (typeof (req.query.author) === 'undefined') &&
-        (typeof (req.query.name) === 'undefined') &&
-        (typeof (req.query.sortType) === 'undefined') &&
-        (typeof (req.query.name) === 'undefined')
+    // since author firstname may contain empty strings, forced to use special character '³' 
+    // Assume author and title may contain empty data
+    if (typeof (req.query.author) === 'undefined') {
+        req.query.author = '³';
+    }
+    if (typeof (req.query.title) === 'undefined') {
+        req.query.title = '³';
+    }
+    if (typeof (req.query.limit) === 'undefined') {
+        req.query.limit = '10';
+    }
+    if (typeof (req.query.sortType) === 'undefined') {
+        req.query.sortType = 'none';
+    }
+    if (typeof (req.query.offset) === 'undefined') {
+        req.query.offset = '0';
+    }
+
+    if (  
+        (req.query.author == '³') &&
+        (req.query.title == '³') 
     ) {
+        // R1Q2a, default endpoint http://localhost:3000/api/books
+        // http://localhost:3000/api/books?limit=10&offset=10
+        // http://localhost:3000/api/books
         console.log("Empty query");
         console.log("Here");
-        findDefaultBooks().then((results) => {
+        findDefaultBooks([parseInt(req.query.limit),parseInt(req.query.offset)]).then((results) => {
             resp.json(results);
         }).catch((error) => {
             console.log(error);
             resp.status(500).json(error);
         });
     } else {
+        console.log("Query for title or/and author query");
         //1.Search fields using queries: Title & Autho
         //  http://localhost:3000/api/books?title=adv&limit=10&offset=0
         //  http://localhost:3000/api/books?author=wil&limit=10&offset=0
         //  http://localhost:3000/api/books?title=adv&author=wil&limit=10&offset=0
-        //  if (typeof (bookId) === 'undefined') {
-        if (typeof (req.query.limit) === 'undefined') {
-            req.query.limit = '10';
-        }
-        if (typeof (req.query.author) === 'undefined') {
-            req.query.author = '³';
-        }
-        if (typeof (req.query.title) === 'undefined') {
-            req.query.title = '³';
-        }
-        if (typeof (req.query.sortType) === 'undefined') {
-            req.query.sortType = 'none';
-        }
-        if (typeof (req.query.offset) === 'undefined') {
-            req.query.offset = '0';
-        }
+
         console.log(req.query);
 
         var title_keyword = req.query.title;
@@ -172,15 +164,8 @@ app.get(API_URI + '/books', (req, resp) => {
         //   if title keyword, then [ keyword, '', '', limit, offset]
         //   if author keyword, then [ '', keyword, keyword, limit, offset]
         //   if both , then [ keyword, keyword, keyword, limit, offset]
-        // since author firstname contain empty strings, forced to use special character '³' 
+        // since author firstname may contain empty strings, forced to use special character '³' 
         let finalCriteriaFromType = ['%', '%', '%', parseInt(req.query.limit), parseInt(req.query.offset)];
-        /*         if (selectionType == 'title') {
-                    finalCriteriaFromType = ['%' + keyword + '%', '³', '³', parseInt(req.query.limit),parseInt(req.query.offset)];
-                } else if (selectionType == 'name') {
-                    finalCriteriaFromType = ['³', '%' + keyword + '%', '%' + keyword + '%', parseInt(req.query.limit),parseInt(req.query.offset)];
-                } else if (selectionType == 'both') {
-                    finalCriteriaFromType = ['%' + keyword + '%', '%' + keyword + '%', '%' + keyword + '%', parseInt(req.query.limit),parseInt(req.query.offset)];
-                } */
         finalCriteriaFromType = ['%' + title_keyword + '%', '%' + author_keyword + '%', '%' + author_keyword + '%', parseInt(req.query.limit), parseInt(req.query.offset)];
         if (req.query.sortType == 'none') {
             findAllBooks(finalCriteriaFromType)
@@ -238,24 +223,26 @@ app.get(API_URI + '/books', (req, resp) => {
 
 
     }
-    /*     else {
-            // resp.status(200);
-            //resp.json({name:"fred"});
-            console.log("Here");
-            sqlFindDefaultBooks([parseInt(bookId)]).then((results) => {
-                resp.json(results);
-            }).catch((error) => {
-                console.log(error);
-                resp.status(500).json(error);
-            });
-        } */
+
 });
 
+//Define our routes
+// GET /image -> text/html
+app.get('/images', (req, resp) => {
+    resp.status(200);
+    resp.type('image/jpg');
+    resp.sendfile(path.join(__dirname, 'images', imageFile));
+});
 
 
 //Serves from public the dist directory
 app.use(express.static(__dirname + "/../src/app"));
-console.log(__dirname);
+console.log("Current base path: ",__dirname);
+
+for (let res of resources) {
+    console.info(`Adding ${res} to static`)
+    app.use(express.static(path.join(__dirname, res)));
+}
 
 //Step 4: start the server
 const PORT = parseInt(process.argv[2]) || parseInt(process.env.APP_PORT) || 3000;
